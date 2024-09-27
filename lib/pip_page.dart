@@ -22,6 +22,7 @@ class _PIPExampleAppState extends State<PIPExampleApp>
   void initState() {
     pip = Floating();
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkPiPAvailability();
 
     _controller = VideoPlayerController.networkUrl(
@@ -35,6 +36,13 @@ class _PIPExampleAppState extends State<PIPExampleApp>
       });
   }
 
+  @override
+  void dispose() {
+    _controller.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
   _checkPiPAvailability() async {
     isPipAvailable = await pip.isPipAvailable;
     setState(() {});
@@ -42,16 +50,23 @@ class _PIPExampleAppState extends State<PIPExampleApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.hidden && isPipAvailable) {
-      pip.enable(const ImmediatePiP(aspectRatio: Rational.landscape()));
+    print('App lifecycle state: $state');
+    if (isPipAvailable) {
+      if (state == AppLifecycleState.inactive) {
+        pip.enable(const ImmediatePiP(aspectRatio: Rational.landscape()));
+      } else if (state == AppLifecycleState.resumed) {
+        pip.cancelOnLeavePiP();
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return PiPSwitcher(
+      floating: pip,
       childWhenDisabled: Scaffold(
         body: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             VideoPlayerWidget(
               controller: _controller,
